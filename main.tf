@@ -32,6 +32,10 @@ provider "keycloak" {
 resource "keycloak_realm" "notes-app" {
   realm   = "notes-app"
   enabled = true
+
+  # 5m (o default do Keycloak) obriga a refazer o fluxo a cada 5 minutos
+  # durante o desenvolvimento. 2h e so para o laboratorio.
+  access_token_lifespan = "2h"
 }
 
 resource "keycloak_openid_client" "my_client" {

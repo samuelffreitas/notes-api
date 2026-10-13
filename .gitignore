@@ -3,4 +3,5 @@ terraform.tfvars
 *.tfstate.*
 .terraform/
 tokens.json
+tokens-expirado.json
 .env

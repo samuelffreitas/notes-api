@@ -1,0 +1,35 @@
+# Credenciais do Postgres: lidas do .env na raiz do repo (o mesmo que o
+# docker-compose usa). O caminho é relativo ao working directory, por isso a
+# app tem de arrancar a partir de notes-api/ -- com optional:, um caminho que
+# não resolve não dá erro, só deixa a password sem valor.
+spring:
+  config:
+    import: "optional:file:../.env[.properties]"
+
+  datasource:
+    url: jdbc:postgresql://localhost:5433/notes
+    username: notes
+    password: ${POSTGRES_PASSWORD}
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+    open-in-view: false
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # O Spring descobre o JWKS a partir daqui, pelo endpoint
+          # /.well-known/openid-configuration do realm.
+          issuer-uri: http://localhost:8080/realms/notes-app
+
+# Audiencia exigida pelo AudienceValidator (os validadores por omissao do
+# resource server nao verificam o aud).
+notes:
+  jwt:
+    audience: notes-api
+
+server:
+  port: 8090
