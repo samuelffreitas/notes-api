@@ -39,12 +39,12 @@ resource "keycloak_realm" "notes-app" {
 }
 
 resource "keycloak_openid_client" "my_client" {
-  realm_id                     = keycloak_realm.notes-app.id
-  client_id                    = "notes-web"
-  access_type                   = "PUBLIC"
-  pkce_code_challenge_method   = "S256"
-  valid_redirect_uris          = [ "http://localhost:3000/callback" ]
-  standard_flow_enabled = true
+  realm_id                   = keycloak_realm.notes-app.id
+  client_id                  = "notes-web"
+  access_type                = "PUBLIC"
+  pkce_code_challenge_method = "S256"
+  valid_redirect_uris        = ["http://localhost:3000/callback"]
+  standard_flow_enabled      = true
 }
 
 # Resource server: representa a API. Não inicia nenhum fluxo, só recebe e
@@ -102,10 +102,10 @@ resource "keycloak_group" "team_b" {
 
 resource "keycloak_user" "utilizadores" {
   for_each = {
-    "user1" = { username = "joao.silva",   first = "João",   last = "Silva",    email = "joao@empresa.com" }
-    "user2" = { username = "maria.santos", first = "Maria",  last = "Santos",   email = "maria@empresa.com" }
-    "user3" = { username = "pedro.gomes",  first = "Pedro",  last = "Gomes",    email = "pedro@empresa.com" }
-    "user4" = { username = "ana.pinto",    first = "Ana",    last = "Pinto",    email = "ana@empresa.com" }
+    "user1" = { username = "joao.silva", first = "João", last = "Silva", email = "joao@empresa.com" }
+    "user2" = { username = "maria.santos", first = "Maria", last = "Santos", email = "maria@empresa.com" }
+    "user3" = { username = "pedro.gomes", first = "Pedro", last = "Gomes", email = "pedro@empresa.com" }
+    "user4" = { username = "ana.pinto", first = "Ana", last = "Pinto", email = "ana@empresa.com" }
   }
 
   realm_id   = keycloak_realm.notes-app.id
@@ -157,17 +157,17 @@ resource "keycloak_user_roles" "roles_utilizadores" {
 }
 
 resource "keycloak_openid_group_membership_protocol_mapper" "mapear_equipas_utilizador" {
-  realm_id  = keycloak_realm.notes-app.id
-  
-  client_id = keycloak_openid_client.my_client.id 
-  
-  name      = "mapper-equipas"
+  realm_id = keycloak_realm.notes-app.id
 
-  claim_name = "teams" 
+  client_id = keycloak_openid_client.my_client.id
 
-  add_to_id_token     = true  
-  add_to_access_token = true  
-  add_to_userinfo     = true  
+  name = "mapper-equipas"
 
-  full_path = false 
+  claim_name = "teams"
+
+  add_to_id_token     = true
+  add_to_access_token = true
+  add_to_userinfo     = true
+
+  full_path = false
 }
