@@ -76,6 +76,12 @@ resource "keycloak_role" "admin" {
   realm_id    = keycloak_realm.notes-app.id
   name        = "app-admin"
   description = "Administrador da Aplicação"
+
+  # Role composta: quem a tem recebe também as outras duas no token.
+  composite_roles = [
+    keycloak_role.team-lead.id,
+    keycloak_role.user.id,
+  ]
 }
 
 resource "keycloak_role" "user" {
@@ -88,6 +94,11 @@ resource "keycloak_role" "team-lead" {
   realm_id    = keycloak_realm.notes-app.id
   name        = "app-team-lead"
   description = "Líder de Equipa da Aplicação"
+
+  # Role composta: um team-lead é sempre também um app-user.
+  composite_roles = [
+    keycloak_role.user.id,
+  ]
 }
 
 resource "keycloak_group" "team_a" {
@@ -137,14 +148,14 @@ resource "keycloak_user_groups" "membros_team_b" {
   group_ids = [keycloak_group.team_b.id]
 }
 
-# Atribuição de roles: todos levam app-user; cada equipa tem um team-lead;
-# a Ana é a única app-admin.
+# Atribuição de roles: só a role de topo de cada um. A hierarquia está
+# declarada nas roles compostas acima, e o Keycloak expande-a no token.
 locals {
   roles_por_utilizador = {
-    "user1" = [keycloak_role.user.id, keycloak_role.team-lead.id] # João  - lead team-a
-    "user2" = [keycloak_role.user.id]                             # Maria - team-a
-    "user3" = [keycloak_role.user.id, keycloak_role.team-lead.id] # Pedro - lead team-b
-    "user4" = [keycloak_role.user.id, keycloak_role.admin.id]     # Ana   - admin
+    "user1" = [keycloak_role.team-lead.id] # João  - lead team-a (traz app-user)
+    "user2" = [keycloak_role.user.id]      # Maria - team-a
+    "user3" = [keycloak_role.team-lead.id] # Pedro - lead team-b (traz app-user)
+    "user4" = [keycloak_role.admin.id]     # Ana   - admin (traz as outras duas)
   }
 }
 

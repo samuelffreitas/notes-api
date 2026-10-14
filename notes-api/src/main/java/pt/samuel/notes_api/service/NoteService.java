@@ -1,8 +1,12 @@
 package pt.samuel.notes_api.service;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,9 +26,7 @@ public class NoteService {
 
     // O ownerId e o teamId não vêm do pedido: seriam mass assignment, porque
     // deixariam o cliente escolher a quem pertence a nota e que equipa a vê.
-    // TODO: replace with values from the authenticated JWT (Day 3)
-    private static final String OWNER_ID_PLACEHOLDER = "owner-placeholder";
-    private static final String TEAM_ID_PLACEHOLDER = "team-placeholder";
+    // Vêm do token.
 
     private final NoteRepository noteRepository;
 
@@ -37,20 +39,31 @@ public class NoteService {
         Note note = new Note();
         note.setTitle(pedido.title());
         note.setBody(pedido.body());
-        // TODO: replace with values from the authenticated JWT (Day 3)
-        note.setOwnerId(OWNER_ID_PLACEHOLDER);
-        note.setTeamId(TEAM_ID_PLACEHOLDER);
+        Jwt token = tokenAutenticado();
+        note.setOwnerId(token.getSubject());
+        note.setTeamId(primeiraEquipa(token));
         return NoteResponse.from(noteRepository.save(note));
     }
 
     @Transactional(readOnly = true)
     public List<NoteResponse> findAll() {
-        return noteRepository.findAll().stream().map(NoteResponse::from).toList();
+        Jwt token = tokenAutenticado();
+        String equipa = primeiraEquipa(token);
+
+        List<Note> notas;
+        if (temRole("app-admin")) {
+            notas = noteRepository.findAll();
+        } else if (temRole("app-team-lead")) {
+            notas = noteRepository.findByTeamId(equipa);
+        } else {
+            notas = noteRepository.findByOwnerIdAndTeamId(token.getSubject(), equipa);
+        }
+        return notas.stream().map(NoteResponse::from).toList();
     }
 
     @Transactional(readOnly = true)
     public Optional<NoteResponse> findById(Long id) {
-        return noteRepository.findById(id).map(NoteResponse::from);
+        return noteRepository.findById(id).filter(this::podeAceder).map(NoteResponse::from);
     }
 
     /**
@@ -59,7 +72,7 @@ public class NoteService {
      */
     @Transactional
     public Optional<NoteResponse> update(Long id, CreateNoteRequest pedido) {
-        return noteRepository.findById(id).map(existente -> {
+        return noteRepository.findById(id).filter(this::podeAceder).map(existente -> {
             // Só o title e o body são editáveis. O id e o createdAt mantêm-se
             // porque se atualiza a entidade carregada, e o ownerId/teamId
             // ficam como estavam: não são do cliente para mudar.
@@ -74,10 +87,46 @@ public class NoteService {
      */
     @Transactional
     public boolean delete(Long id) {
-        if (!noteRepository.existsById(id)) {
+        Optional<Note> nota = noteRepository.findById(id).filter(this::podeAceder);
+        if (nota.isEmpty()) {
             return false;
         }
-        noteRepository.deleteById(id);
+        noteRepository.delete(nota.get());
         return true;
+    }
+
+    /**
+     * Quem não tem acesso recebe 404, não 403: um 403 confirmaria que a nota
+     * existe, e isso por si só já é informação sobre registos de outros.
+     */
+    private boolean podeAceder(Note note) {
+        if (temRole("app-admin")) {
+            return true;
+        }
+        Jwt token = tokenAutenticado();
+        String equipa = primeiraEquipa(token);
+
+        if (temRole("app-team-lead")) {
+            return Objects.equals(note.getTeamId(), equipa);
+        }
+        return Objects.equals(note.getOwnerId(), token.getSubject())
+                && Objects.equals(note.getTeamId(), equipa);
+    }
+
+    private boolean temRole(String role) {
+        return SecurityContextHolder.getContext().getAuthentication().getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch(("ROLE_" + role)::equals);
+    }
+
+    // O token já foi validado pelo resource server; aqui só se lê.
+    private Jwt tokenAutenticado() {
+        return (Jwt) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+    }
+
+    // O mapper do Keycloak injeta uma lista; a coluna team_id guarda um valor.
+    private String primeiraEquipa(Jwt token) {
+        List<String> equipas = token.getClaimAsStringList("teams");
+        return (equipas == null || equipas.isEmpty()) ? null : equipas.get(0);
     }
 }

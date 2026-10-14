@@ -13,6 +13,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import org.springframework.security.access.prepost.PreAuthorize;
+
 import jakarta.validation.Valid;
 import pt.samuel.notes_api.dto.CreateNoteRequest;
 import pt.samuel.notes_api.dto.NoteResponse;
@@ -28,16 +30,19 @@ public class NoteController {
         this.noteService = noteService;
     }
 
+    @PreAuthorize("hasRole('app-user')")
     @PostMapping
     public ResponseEntity<NoteResponse> createNote(@Valid @RequestBody CreateNoteRequest pedido) {
         return ResponseEntity.status(HttpStatus.CREATED).body(noteService.create(pedido));
     }
 
+    @PreAuthorize("hasRole('app-user')")
     @GetMapping
     public List<NoteResponse> listNotes() {
         return noteService.findAll();
     }
 
+    @PreAuthorize("hasRole('app-user')")
     @GetMapping("/{id}")
     public ResponseEntity<NoteResponse> getNote(@PathVariable Long id) {
         return noteService.findById(id)
@@ -45,6 +50,7 @@ public class NoteController {
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
+    @PreAuthorize("hasRole('app-user')")
     @PutMapping("/{id}")
     public ResponseEntity<NoteResponse> updateNote(@PathVariable Long id,
             @Valid @RequestBody CreateNoteRequest pedido) {
@@ -53,6 +59,7 @@ public class NoteController {
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
+    @PreAuthorize("hasRole('app-user')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteNote(@PathVariable Long id) {
         return noteService.delete(id)

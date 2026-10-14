@@ -5,6 +5,7 @@ import org.springframework.boot.security.oauth2.server.resource.autoconfigure.OA
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
 import org.springframework.security.oauth2.core.OAuth2TokenValidator;
@@ -13,22 +14,34 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtDecoders;
 import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 
 import pt.samuel.notes_api.security.AudienceValidator;
 import pt.samuel.notes_api.security.GenericAuthenticationEntryPoint;
+import pt.samuel.notes_api.security.KeycloakRolesConverter;
 
 // Código que  configura o Spring Security 
 // para transformar a aplicação num Resource Server 
 
 @Configuration
+// Liga o @PreAuthorize nos controllers.
+@EnableMethodSecurity
 public class SecurityConfig {
 
 
     @Bean
     AuthenticationEntryPoint authenticationEntryPoint() {
         return new GenericAuthenticationEntryPoint();
+    }
+
+    // Transforma as roles do token em authorities ROLE_*.
+    @Bean
+    JwtAuthenticationConverter jwtAuthenticationConverter() {
+        JwtAuthenticationConverter conversor = new JwtAuthenticationConverter();
+        conversor.setJwtGrantedAuthoritiesConverter(new KeycloakRolesConverter());
+        return conversor;
     }
 
     // Monta o verificador de tokens.
@@ -56,8 +69,8 @@ public class SecurityConfig {
 
     // Define as regras.
     @Bean
-    SecurityFilterChain securityFilterChain(HttpSecurity http, AuthenticationEntryPoint entryPoint)
-            throws Exception {
+    SecurityFilterChain securityFilterChain(HttpSecurity http, AuthenticationEntryPoint entryPoint,
+            JwtAuthenticationConverter conversorDeRoles) throws Exception {
         return http
                 // não uses proteção CSRF
                 .csrf(csrf -> csrf.disable())
@@ -73,8 +86,7 @@ public class SecurityConfig {
                 .oauth2ResourceServer(oauth2 -> oauth2
                         // quando falhar, usa o meu GenericAuthenticationEntryPoint
                         .authenticationEntryPoint(entryPoint)
-                        .jwt(jwt -> {
-                        }))
+                        .jwt(jwt -> jwt.jwtAuthenticationConverter(conversorDeRoles)))
                 .build();
     }
 }
