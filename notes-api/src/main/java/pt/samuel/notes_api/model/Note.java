@@ -9,28 +9,41 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
 
+// Entidade que mapeia a tabela note. É a única classe que o JPA persiste e
+// nunca sai da camada de serviço.
+
+// Declara a classe como entidade e aponta-lhe a tabela.
 @Entity(name = "note")
 @Table(name = "note")
 public class Note {
 
+    // Chave primária gerada pela própria base de dados.
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    // Título da nota.
     private String title;
+    // Corpo da nota, guardado em TEXT para não ter limite de 255.
     @Column(columnDefinition = "TEXT")
     private String body;
+    // Dono da nota: o sub do token de quem a criou.
     private String ownerId;
+    // Equipa que define o âmbito de visibilidade da nota.
     private String teamId;
+    // Momento da criação, preenchido antes do insert.
     private LocalDateTime createdAt;
 
-    // A coluna created_at é NOT NULL na migração do Flyway e não vem no corpo
-    // do pedido, por isso preenche-se aqui antes do insert.
+    // Preenche o createdAt antes do insert, porque a coluna é NOT NULL e não
+    // vem no corpo do pedido.
     @PrePersist
     protected void onCreate() {
+        // Só preenche se ainda estiver vazio, para não sobrepor um valor dado.
         if (createdAt == null) {
             createdAt = LocalDateTime.now();
         }
     }
+
+    // Getters e setters usados pelo serviço para ler e preencher a nota.
 
     public Long getId() {
         return id;

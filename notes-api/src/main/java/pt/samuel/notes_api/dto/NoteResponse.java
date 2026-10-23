@@ -4,11 +4,11 @@ import java.time.LocalDateTime;
 
 import pt.samuel.notes_api.model.Note;
 
-/**
- * Representação de uma nota devolvida pela API. A entidade Note nunca sai da
- * camada de serviço, por isso alterações ao mapeamento JPA não mudam o JSON.
- */
+// Nota devolvida pela API. Existe para a entidade Note nunca sair da camada de
+// serviço: mudar o mapeamento JPA não muda o JSON.
+
 public record NoteResponse(
+        // Campos expostos na resposta, na ordem em que aparecem no JSON.
         Long id,
         String title,
         String body,
@@ -16,6 +16,7 @@ public record NoteResponse(
         String teamId,
         LocalDateTime createdAt) {
 
+    // Copia a entidade para o DTO, campo a campo.
     public static NoteResponse from(Note note) {
         return new NoteResponse(
                 note.getId(),
