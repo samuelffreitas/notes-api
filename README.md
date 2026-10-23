@@ -148,3 +148,20 @@ caused by lack of visibility is indistinguishable from a 404 caused by non-exist
   foreign key to Keycloak — nor could there be, they are separate databases.
   If a user is deleted in the IdP, their notes stay in the
   table, visible to app-admin and to the team's team-lead, and deletable only by app-admin. Nobody inherits them and nothing signals that the owner has gone.
+
+## Declaration of AI use
+
+This project was built with Claude Code as an assistant. The access model, the
+403/404 policy and the decisions recorded in DESIGN.md are mine; the assistant
+explained, implemented, reviewed and tested against them. I always asked it to
+explain first what was going to change and in what way, and it waited for my
+approval before implementing anything.
+
+## A note on the git history
+
+The history was rewritten four times with git filter-branch: once to correct a
+wrong author name, twice to translate two commit messages into English, and once
+to remove Co-Authored-By trailers that only two of the ten commits carried.
+Marking some commits as co-authored and not others was incoherent, so authorship
+was made uniform and the use of AI is declared above instead. Only metadata
+changed: the tree hash, the commit order and the dates are untouched.
