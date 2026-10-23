@@ -1,37 +1,61 @@
-**Aplicação:**
+# Design
 
-- Sistema de gestão e criação de notas
-- Utilizadores organizadores equipa e consequentemente administrados por um administrador
-- Cada nota tem dono (owner_id) e âmbito de equipa (team_id)
+## The application
 
-**Papéis:**
+- A notes creation and management system.
+- Users are organized by team and, consequently, administered by an administrator.
+- Every note has an owner (owner_id) and a team scope (team_id).
 
-| Papel | O que pode fazer |
+## Roles
+
+| Role | What it can do |
 |---|---|
-| `app-user` | criar, ler, editar e apagar as suas próprias notas |
-| `app-team-lead` | o mesmo, mais ler as notas da sua equipa |
-| `app-admin` | ler e apagar qualquer nota |
+| app-user | create, read, edit and delete their own notes |
+| app-team-lead | the same, plus reading their team's notes |
+| app-admin | read and delete any note |
 
-O prefixo `app-` distingue as roles desta aplicação das roles que o Keycloak
-cria por defeito em cada realm (`offline_access`, `uma_authorization`, `default-roles-*`).
+The app- prefix distinguishes this application's roles from the ones Keycloak
+creates by default in every realm (offline_access, uma_authorization,
+default-roles-*).
 
-**Notas práticas:**
+## Design notes
 
-1. Um `app-team-lead` da equipa A não pode ver uma nota da equipa B, porque
-o acesso à informação não é determinado pelo cargo ou hierarquia, mas sim pelo contexto da utilização
-da mesma. Como a nota pertence à equipa B, o líder da equipa A não precisa dela para realizar o seu trabalho.
-( Need to Know e segregação de dados)
+### 1. Access follows context, not rank
 
-2. Se alguém muda da equipa A para a B, o elemento perde acesso a notas da equipa anterior que escreveu :
-- A verificação de propriedade deixa de chegar sozinha, isto é, as querys terão que decidir pelo ownerId e
-a equipa atual
-- A lista "as minhas notas" irá automaticamente encolher
-- O acesso é calculado a partir da equipa atual, não concedido e guardado, o que faz com que
-quando alguém mude de equipa, o acesso antigo desaparece sozinho.
-- Nota: escolhi o ambito (ela já não pertence à equipa A.) á propriedade (ela vê).
+An app-team-lead of team A cannot see a note belonging to team B. Access to
+information is not determined by position or hierarchy, but by the context in
+which that information is used. The note belongs to team B, so team A's lead
+does not need it to do their job.
 
-3. O RBAC puro deixa de chegar quando falha ao tentar controlar o acesso a registos específicos e 
-quando o numero de roles ultrapassa o numero de colaboradores da empresa (role explosion ).
+*(Need to Know and data segregation.)*
 
-4. Os utilizadores não vivem na  base de dados, vivem no Keycloak. 
-O owner_id guarda o sub do token.
+### 2. Changing team removes access to what was left behind
+
+If someone moves from team A to team B, they lose access to the notes they
+wrote in the previous team.
+
+- An ownership check is no longer enough on its own: the queries have to decide
+  on the ownerId **and** the current team.
+- Access is computed from the current team, not granted and stored — so when
+  someone changes team, the old access disappears by itself.
+
+Note: I chose scope (she no longer belongs to team A) over ownership (she gets
+to see it).
+
+### 3. RBAC alone does not reach far enough
+
+Pure RBAC answers *"may this person use this operation?"* and not *"over this
+record?"*. That is why the per-record check lives in the service, and not only
+in @PreAuthorize.
+
+### 4. Users do not live in the database
+
+They live in Keycloak. owner_id stores the token's sub.
+
+## Deferred decisions
+
+1. **Consistency as an application rule** — an endpoint that returns 403 where
+   the others return 404 is an oracle in itself. The rule has to live in a
+   single place, not in every controller.
+2. **Centralized authorization** — the decision lives today in a private method
+   of the service. With three entities it is repeated three times, and diverges.
