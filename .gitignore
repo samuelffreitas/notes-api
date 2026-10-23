@@ -6,3 +6,4 @@ tokens.json
 tokens-expirado.json
 .env
 *:Zone.Identifier
+.vscode/
