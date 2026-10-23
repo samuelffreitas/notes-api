@@ -1,24 +1,83 @@
 services:
-  postgres:
+  # Base de dados da notes-api. A app corre fora do docker, por isso é o único
+  # serviço com porta publicada para o host.
+  notes-db:
     image: postgres:17-alpine
-    container_name: notes-postgres
+    container_name: notes-db
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-notes}
-      POSTGRES_USER: ${POSTGRES_USER:-notes}
+      POSTGRES_DB: ${NOTES_DB_NAME:-notes}
+      POSTGRES_USER: ${NOTES_DB_USER:-notes}
       # Definida no .env (que não é versionado), à semelhança do terraform.tfvars.
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?define POSTGRES_PASSWORD no .env}
+      POSTGRES_PASSWORD: ${NOTES_DB_PASSWORD:?define NOTES_DB_PASSWORD no .env}
     ports:
       # 5432 do host pode estar ocupado por um postgres local: expõe-se em 5433.
       - "5433:5432"
     volumes:
-      - postgres-data:/var/lib/postgresql/data
+      - notes-db-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-notes} -d ${POSTGRES_DB:-notes}"]
+      test: ["CMD-SHELL", "pg_isready -U ${NOTES_DB_USER:-notes} -d ${NOTES_DB_NAME:-notes}"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 30s
 
+  # Base de dados do Keycloak. Separada da das notas de propósito: o servidor de
+  # identidade e a aplicação não partilham estado. Sem porta publicada, só o
+  # Keycloak lhe acede, pela rede interna do compose.
+  keycloak-db:
+    image: postgres:17-alpine
+    container_name: keycloak-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: ${KEYCLOAK_DB_PASSWORD:?define KEYCLOAK_DB_PASSWORD no .env}
+    volumes:
+      - keycloak-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keycloak -d keycloak"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.5
+    container_name: keycloak
+    restart: unless-stopped
+    # start-dev: sem TLS e sem hostname fixo. Serve o laboratório, não serve produção.
+    command: start-dev
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      # Tem de ser igual ao keycloak_admin_password do terraform.tfvars: é com
+      # esta conta que o provider do terraform entra na Admin REST API.
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?define KEYCLOAK_ADMIN_PASSWORD no .env}
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://keycloak-db:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
+      # Expõe /health na porta de gestão (9000), usada pelo healthcheck abaixo.
+      KC_HEALTH_ENABLED: "true"
+    ports:
+      # O issuer-uri da app e o url do provider do terraform apontam para aqui.
+      - "8080:8080"
+    depends_on:
+      keycloak-db:
+        condition: service_healthy
+    healthcheck:
+      # A imagem do Keycloak não traz curl nem wget, por isso o pedido HTTP
+      # é feito à mão sobre /dev/tcp do bash.
+      test:
+        [
+          "CMD-SHELL",
+          "exec 3<>/dev/tcp/127.0.0.1/9000 && printf 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && cat <&3 | grep -q UP",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
 volumes:
-  postgres-data:
+  notes-db-data:
+  keycloak-db-data:

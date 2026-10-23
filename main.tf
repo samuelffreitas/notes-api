@@ -45,6 +45,10 @@ resource "keycloak_openid_client" "my_client" {
   pkce_code_challenge_method = "S256"
   valid_redirect_uris        = ["http://localhost:3000/callback"]
   standard_flow_enabled      = true
+
+  # Trocar username+password por um token num so pedido contornaria o browser,
+  # e com ele o PKCE. Fica desligado por decisao, nao por omissao do provider.
+  direct_access_grants_enabled = false
 }
 
 # Resource server: representa a API. Não inicia nenhum fluxo, só recebe e

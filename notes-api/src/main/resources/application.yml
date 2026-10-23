@@ -9,7 +9,7 @@ spring:
   datasource:
     url: jdbc:postgresql://localhost:5433/notes
     username: notes
-    password: ${POSTGRES_PASSWORD}
+    password: ${NOTES_DB_PASSWORD}
 
   jpa:
     hibernate:
