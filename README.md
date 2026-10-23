@@ -3,6 +3,21 @@
 An OAuth 2.0 resource server exposing a notes REST API, with token validation
 and three-layer authorization against Keycloak.
 
+## Contents
+
+- [The purpose](#the-purpose)
+- [The model](#the-model)
+- [Architecture](#architecture)
+- [Tech stack](#tech-stack)
+- [Running it](#running-it)
+  - [1. Infrastructure](#1-infrastructure)
+  - [2. Configure the realm](#2-configure-the-realm)
+  - [3. The application](#3-the-application)
+  - [4. Get a token](#4-get-a-token)
+- [Testing](#testing)
+- [Deliberately not done](#deliberately-not-done)
+- [Declaration of AI use](#declaration-of-ai-use)
+
 ## The purpose
 
 This application was built in an IAM (Identity and Access Management) context to explore the strict separation of responsibilities between an Authorization Server (Keycloak) and a Resource Server (this API). Under this model, the API does not manage users, passwords or credentials, focusing instead on storing its own resources (the notes). The identity of each record's owner is established through the sub claim in the JWT, which forces the Resource Server to accept an externally signed token and make secure access decisions about claims it neither produced nor controls.
