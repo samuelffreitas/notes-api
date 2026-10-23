@@ -12,7 +12,7 @@
 |---|---|
 | app-user | create, read, edit and delete their own notes |
 | app-team-lead | the same, plus reading their team's notes |
-| app-admin | read and delete any note |
+| app-admin | the same, plus reading and deleting any note |
 
 The app- prefix distinguishes this application's roles from the ones Keycloak
 creates by default in every realm (offline_access, uma_authorization,

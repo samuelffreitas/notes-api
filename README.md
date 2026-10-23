@@ -22,7 +22,7 @@ composite: app-admin inherits app-team-lead, which inherits app-user.
 
 - app-user -> Create, read, edit and delete their own notes.
 - app-team-lead -> Same permissions as a user, plus reading their team's notes.
-- app-admin -> Read and delete any note in the system.
+- app-admin -> The same, plus reading and deleting any note in the system.
 
 Every note has an owner (owner_id / the token's sub) within a team context (team_id / the teams claim). Under the Need to Know principle, context prevails over ownership: if a user moves from team A to team B, they immediately lose access to the notes they wrote in team A.
 
@@ -58,11 +58,22 @@ To mitigate information disclosure, the API's responses are defensive. HTTP 404 
   └──────────────┘
 ```
 
-Following the Zero Trust principle, the API and Keycloak operate in isolation: that is,
+The API and Keycloak operate in isolation, that is,
 Keycloak never contacts the API, and the API does not contact it on every request. It
 verifies signatures in memory, with the JWKS public keys that it fetches at startup,
 keeps in cache and fetches again when Keycloak rotates the keys.
 As a matter of good practice, all of Keycloak's infrastructure is declared and managed through Terraform, in main.tf.
+
+## Tech stack
+
+- Java 21, Spring Boot 4.1.1
+- Spring Security 7.1.1 (OAuth 2.0 resource server)
+- Keycloak 26.5
+- PostgreSQL 17
+- Terraform, keycloak provider 5.9.0
+- Docker
+
+Exact dependency versions are in notes-api/pom.xml and .terraform.lock.hcl.
 
 ## Running it
 
@@ -132,9 +143,18 @@ from them.
 
 ## Testing
 
-Testing was done manually, running in Postman a matrix of requests with tokens from different users against the same notes, covering the combinations of owner, team and
-role, and confirming the response code of each one, including that a 404
-caused by lack of visibility is indistinguishable from a 404 caused by non-existence, on the user's side.
+Testing was done manually, running in Postman a matrix of requests. Beyond the
+CRUD, which was verified first, these were the requests aimed at the security
+premises:
+
+| # | Request | Verification |
+|---|---|---|
+| 1 | POST /notes as joao | the owner and the team are taken from the token, not from the request body |
+| 2 | GET /notes as joao | the listing is scoped in the query: a plain user never receives another team’s notes |
+| 3 | GET /notes/2 as joao | the IDOR itself: note 2 belongs to ana, in team-b, and a known id from another team does not come through |
+| 4 | PUT /notes/1 as ana | an admin cannot edit a note that is not theirs, which is what DESIGN.md states |
+| 5 | DELETE /notes/2 as joao | a note that is not visible answers 404 and not 403, so the denial does not reveal that it exists |
+| 6 | GET /notes/1 as joao | once ana has deleted it: a note that no longer exists answers exactly the same 404 as one that is merely invisible |
 
 ## Deliberately not done
 
@@ -156,12 +176,3 @@ This project was built with Claude Code as an assistant. The access model, the
 explained, implemented, reviewed and tested against them. I always asked it to
 explain first what was going to change and in what way, and it waited for my
 approval before implementing anything.
-
-## A note on the git history
-
-The history was rewritten four times with git filter-branch: once to correct a
-wrong author name, twice to translate two commit messages into English, and once
-to remove Co-Authored-By trailers that only two of the ten commits carried.
-Marking some commits as co-authored and not others was incoherent, so authorship
-was made uniform and the use of AI is declared above instead. Only metadata
-changed: the tree hash, the commit order and the dates are untouched.
