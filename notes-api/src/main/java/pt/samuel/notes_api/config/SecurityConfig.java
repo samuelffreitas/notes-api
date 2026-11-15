@@ -1,5 +1,7 @@
 package pt.samuel.notes_api.config;
 
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.security.oauth2.server.resource.autoconfigure.OAuth2ResourceServerProperties;
 import org.springframework.context.annotation.Bean;
@@ -20,6 +22,7 @@ import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.SecurityFilterChain;
 
 import pt.samuel.notes_api.security.AudienceValidator;
+import pt.samuel.notes_api.security.AzpValidator;
 import pt.samuel.notes_api.security.GenericAccessDeniedHandler;
 import pt.samuel.notes_api.security.GenericAuthenticationEntryPoint;
 import pt.samuel.notes_api.security.KeycloakRolesConverter;
@@ -53,7 +56,8 @@ public class SecurityConfig {
     // Monta o verificador de tokens.
     @Bean
     JwtDecoder jwtDecoder(OAuth2ResourceServerProperties propriedades,
-            @Value("${notes.jwt.audience}") String audiencia) {
+            @Value("${notes.jwt.audience}") String audiencia,
+            @Value("${notes.jwt.allowed-clients}") List<String> clientesPermitidos) {
 
         // Lê o issuer-uri do application.yml.
         String issuer = propriedades.getJwt().getIssuerUri();
@@ -65,7 +69,8 @@ public class SecurityConfig {
         // Junta num só objeto as verificações do Spring mais a tua.
         OAuth2TokenValidator<Jwt> validadores = new DelegatingOAuth2TokenValidator<>(
                 JwtValidators.createDefaultWithIssuer(issuer),   // iss, exp, nbf
-                new AudienceValidator(audiencia));               // aud  <- teu
+                new AudienceValidator(audiencia),                // aud  <- teu
+                new AzpValidator(clientesPermitidos));           // azp  <- teu
 
         // Diz ao verificador: "além da assinatura, confere também estas claims."
         descodificador.setJwtValidator(validadores);

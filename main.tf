@@ -186,3 +186,64 @@ resource "keycloak_openid_group_membership_protocol_mapper" "mapear_equipas_util
 
   full_path = false
 }
+
+# ---------------------------------------------------------------------------
+# Serviço sem utilizador (NHI): o notes-exporter
+# ---------------------------------------------------------------------------
+
+# Cliente confidencial que pede tokens em nome próprio, por client_credentials.
+# Não tem fluxo de browser porque não há utilizador para redirecionar.
+resource "keycloak_openid_client" "notes_exporter" {
+  realm_id    = keycloak_realm.notes-app.id
+  client_id   = "notes-exporter"
+  access_type = "CONFIDENTIAL"
+
+  # É este interruptor que liga o client_credentials e cria a conta de serviço.
+  service_accounts_enabled = true
+
+  standard_flow_enabled        = false
+  implicit_flow_enabled        = false
+  direct_access_grants_enabled = false
+
+  # 2h é o tempo do realm, escolhido para não obrigar a refazer o fluxo no
+  # browser. Uma máquina pede um token novo a custo zero, por isso 5 minutos.
+  access_token_lifespan = "300"
+}
+
+# Role isolada, sem composite_roles: dar app-admin ao serviço traria também
+# app-user, e com ele a permissão de criar, editar e apagar.
+resource "keycloak_role" "notes_exporter" {
+  realm_id    = keycloak_realm.notes-app.id
+  name        = "app-notes-exporter"
+  description = "Serviço de exportação: só a listagem completa, sem escrita"
+}
+
+# No Keycloak as roles atribuem-se a utilizadores, nunca a clientes. O
+# service_accounts_enabled criou um utilizador escondido, e é a ele que se dá
+# a role; o service_account_user_id é gerado pelo Keycloak ao criar o cliente.
+resource "keycloak_openid_client_service_account_realm_role" "exporter_role" {
+  realm_id                = keycloak_realm.notes-app.id
+  service_account_user_id = keycloak_openid_client.notes_exporter.service_account_user_id
+  role                    = keycloak_role.notes_exporter.name
+}
+
+# O mapper de audiência é por cliente: sem este, o token do exportador não traz
+# "notes-api" no aud e o AudienceValidator recusa-o com 401.
+resource "keycloak_openid_audience_protocol_mapper" "notes_exporter_audience_api" {
+  realm_id  = keycloak_realm.notes-app.id
+  client_id = keycloak_openid_client.notes_exporter.id
+  name      = "audience-notes-api"
+
+  included_client_audience = keycloak_openid_client.notes_api.client_id
+
+  add_to_access_token = true
+  add_to_id_token     = false
+}
+
+# Segredo gerado pelo Keycloak. Lê-se com "terraform output -raw
+# notes_exporter_secret"; o sensitive esconde-o no output normal do apply.
+output "notes_exporter_secret" {
+  value       = keycloak_openid_client.notes_exporter.client_secret
+  description = "Segredo do cliente notes-exporter, para o client_credentials"
+  sensitive   = true
+}

@@ -44,8 +44,8 @@ public class NoteController {
         return ResponseEntity.status(HttpStatus.CREATED).body(noteService.create(pedido));
     }
 
-    // GET /notes, restrito a quem tem a role app-user.
-    @PreAuthorize("hasRole('app-user')")
+    // GET /notes, aberto a quem tem app-user ou ao serviço de exportação.
+    @PreAuthorize("hasAnyRole('app-user','app-notes-exporter')")
     @GetMapping
     public List<NoteResponse> listNotes() {
         // Devolve as notas que o serviço considera visíveis para quem pede.

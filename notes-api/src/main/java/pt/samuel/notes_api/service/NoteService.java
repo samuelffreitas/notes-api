@@ -72,7 +72,12 @@ public class NoteService {
 
         // Notas a devolver, escolhidas conforme a role.
         List<Note> notas;
-        if (temRole("app-admin")) {
+        if (ehServico()) {
+            // O serviço de exportação lê a listagem toda, sem filtro de equipa.
+            notas = noteRepository.findAll();
+            // O sub de uma conta de serviço não identifica ninguém: audita-se o azp.
+            log.info("leitura de servico: azp={} notas devolvidas={}", azp(token), notas.size());
+        } else if (temRole("app-admin")) {
             // O admin vê todas as notas do sistema.
             notas = noteRepository.findAll();
         } else if (temRole("app-team-lead")) {
@@ -194,6 +199,18 @@ public class NoteService {
         return SecurityContextHolder.getContext().getAuthentication().getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .anyMatch(("ROLE_" + role)::equals);
+    }
+
+    // Verifica se quem pede é o serviço de exportação.
+    private boolean ehServico() {
+        // Exigir o azp impede que esta role, dada a um humano, lhe abra a leitura total.
+        return temRole("app-notes-exporter")
+                && "notes-exporter".equals(azp(tokenAutenticado()));
+    }
+
+    // Cliente que pediu o token, a única identificação útil de um serviço.
+    private String azp(Jwt token) {
+        return token.getClaimAsString("azp");
     }
 
     // Token do pedido atual, que o resource server já validou.
