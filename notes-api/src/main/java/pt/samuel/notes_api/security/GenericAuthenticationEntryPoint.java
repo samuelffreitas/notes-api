@@ -27,9 +27,9 @@ public class GenericAuthenticationEntryPoint implements AuthenticationEntryPoint
     public void commence(HttpServletRequest pedido, HttpServletResponse resposta,
             AuthenticationException excecao) throws IOException {
 
-        // Regista no log o método, o caminho e a causa real da falha.
-        log.warn("401 em {} {} -> {}", pedido.getMethod(), pedido.getRequestURI(),
-                motivo(excecao));
+        // Regista a origem, o método, o caminho e a causa real da falha.
+        log.warn("401 em {} {} ip={} -> {}", pedido.getMethod(), pedido.getRequestURI(),
+                RegistoDePedidosFilter.origem(pedido), motivo(excecao));
 
         // Responde 401.
         resposta.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
