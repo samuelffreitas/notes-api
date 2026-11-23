@@ -36,6 +36,17 @@ resource "keycloak_realm" "notes-app" {
   # 5m (o default do Keycloak) obriga a refazer o fluxo a cada 5 minutos
   # durante o desenvolvimento. 2h e so para o laboratorio.
   access_token_lifespan = "2h"
+
+  # A simples presenca deste bloco e que poe bruteForceProtected a true: nao
+  # existe atributo para a flag. Os valores que o Keycloak ja tinha guardados
+  # estavam todos corretos e inertes, por isso so se declara o que muda a
+  # leitura do ficheiro -- o resto fica nos defaults, iguais aos que ja lá estavam.
+  # Sem isto, o admin-cli e um oraculo de validacao de passwords sem limite.
+  security_defenses {
+    brute_force_detection {
+      max_login_failures = 30
+    }
+  }
 }
 
 resource "keycloak_openid_client" "my_client" {
