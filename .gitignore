@@ -8,6 +8,9 @@ terraform.tfvars.json
 tokens*.json
 .env
 .env.*
+*.env
+*.expirado
+__pycache__/
 !.env.example
 *.pem
 *.key

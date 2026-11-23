@@ -247,3 +247,49 @@ output "notes_exporter_secret" {
   description = "Segredo do cliente notes-exporter, para o client_credentials"
   sensitive   = true
 }
+
+# ---------------------------------------------------------------------------
+# Segundo servico, usado para provar a ligacao entre a role e o azp
+# ---------------------------------------------------------------------------
+
+# Tem a mesma role do notes-exporter mas um client_id diferente. Serve para
+# provar que a role sozinha nao abre a leitura total: o ehServico() exige
+# tambem que o azp seja notes-exporter.
+resource "keycloak_openid_client" "notes_reporter" {
+  realm_id    = keycloak_realm.notes-app.id
+  client_id   = "notes-reporter"
+  access_type = "CONFIDENTIAL"
+
+  service_accounts_enabled     = true
+  standard_flow_enabled        = false
+  implicit_flow_enabled        = false
+  direct_access_grants_enabled = false
+
+  access_token_lifespan = "300"
+}
+
+# A mesma role do exportador, de proposito: e isso que torna o teste valido.
+resource "keycloak_openid_client_service_account_realm_role" "reporter_role" {
+  realm_id                = keycloak_realm.notes-app.id
+  service_account_user_id = keycloak_openid_client.notes_reporter.service_account_user_id
+  role                    = keycloak_role.notes_exporter.name
+}
+
+# Sem este mapper o token parava no AudienceValidator e nunca chegaria a
+# camada de servico, que e onde a verificacao do azp vive.
+resource "keycloak_openid_audience_protocol_mapper" "notes_reporter_audience_api" {
+  realm_id  = keycloak_realm.notes-app.id
+  client_id = keycloak_openid_client.notes_reporter.id
+  name      = "audience-notes-api"
+
+  included_client_audience = keycloak_openid_client.notes_api.client_id
+
+  add_to_access_token = true
+  add_to_id_token     = false
+}
+
+output "notes_reporter_secret" {
+  value       = keycloak_openid_client.notes_reporter.client_secret
+  description = "Segredo do cliente notes-reporter, usado nos testes do azp"
+  sensitive   = true
+}

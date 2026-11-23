@@ -32,7 +32,7 @@ notes:
     audience: notes-api
     # Clientes de que a API aceita tokens, conferidos pelo AzpValidator. Cada
     # cliente novo tem de ser declarado aqui, e nao so no Terraform.
-    allowed-clients: notes-web,notes-exporter
+    allowed-clients: notes-web,notes-exporter,notes-reporter
 
 server:
   port: 8090
