@@ -36,7 +36,7 @@ wrote in the previous team.
 
 - An ownership check is no longer enough on its own: the queries have to decide
   on the ownerId **and** the current team.
-- Access is computed from the current team, not granted and stored — so when
+- Access is computed from the current team, not granted and stored, so when
   someone changes team, the old access disappears by itself.
 
 Note: I chose scope (she no longer belongs to team A) over ownership (she gets
