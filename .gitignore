@@ -11,6 +11,7 @@ tokens*.json
 *.env
 *.expirado
 __pycache__/
+security-tests/results-*.txt
 !.env.example
 *.pem
 *.key
