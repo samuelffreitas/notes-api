@@ -26,8 +26,8 @@ public class GenericAccessDeniedHandler implements AccessDeniedHandler {
             AccessDeniedException excecao) throws IOException {
 
         // Regista os 403 do @PreAuthorize, que de outra forma não deixavam rasto.
-        log.warn("403 em {} {} -> {}", pedido.getMethod(), pedido.getRequestURI(),
-                excecao.getMessage());
+        log.warn("403 em {} {} ip={} -> {}", pedido.getMethod(), pedido.getRequestURI(),
+                RegistoDePedidosFilter.origem(pedido), excecao.getMessage());
 
         // Responde 403.
         resposta.setStatus(HttpServletResponse.SC_FORBIDDEN);

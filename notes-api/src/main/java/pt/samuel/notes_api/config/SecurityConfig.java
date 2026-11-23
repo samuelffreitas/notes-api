@@ -17,6 +17,7 @@ import org.springframework.security.oauth2.jwt.JwtDecoders;
 import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
+import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.SecurityFilterChain;
@@ -26,6 +27,7 @@ import pt.samuel.notes_api.security.AzpValidator;
 import pt.samuel.notes_api.security.GenericAccessDeniedHandler;
 import pt.samuel.notes_api.security.GenericAuthenticationEntryPoint;
 import pt.samuel.notes_api.security.KeycloakRolesConverter;
+import pt.samuel.notes_api.security.RegistoDePedidosFilter;
 
 // Código que configura o Spring Security
 // para transformar a aplicação num Resource Server
@@ -97,6 +99,9 @@ public class SecurityConfig {
                 .exceptionHandling(e -> e
                         .authenticationEntryPoint(entryPoint)
                         .accessDeniedHandler(accessDeniedHandler))
+                // Depois da autenticacao, para o filtro ver quem pediu; e antes do
+                // ExceptionTranslationFilter, para ver o status final de um 403.
+                .addFilterAfter(new RegistoDePedidosFilter(), BearerTokenAuthenticationFilter.class)
                 .oauth2ResourceServer(oauth2 -> oauth2
                         // quando falhar, usa o meu GenericAuthenticationEntryPoint
                         .authenticationEntryPoint(entryPoint)
